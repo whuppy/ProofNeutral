@@ -1,0 +1,44 @@
+<%
+import os, ntpath, time, re, binascii
+from stat import *
+%>
+<html>
+<title>Octo Helper</title>
+<body>
+<%
+if form.has_key('boxcar'):
+	oct_str = re.sub('[^0-7]', '', form['boxcar'])
+	try:
+		value = int(oct_str, 8)
+	except:
+		value = 0
+	hex_str = hex(value)[2:]
+	if ('L' == hex_str[-1:]):
+		hex_str = hex_str[:-1]
+	if (len(hex_str) % 2 == 0):
+		b64hex = hex_str
+	else:
+		b64hex = hex_str[:-1]
+	b64msg = re.sub('=', '', binascii.b2a_base64(binascii.unhexlify(b64hex)))
+%>
+<table border="1"> <tr> 
+<td>Octal:</td>
+<td> <%= oct_str %> </td> 
+</tr><tr>
+<td>Hex:</td>
+<td> <%= hex_str %> </td> 
+</tr><tr>
+<td>base64:</td>
+<td> <%= b64msg %> </td> 
+</tr> </table>
+<%
+	#
+#
+%>
+<hr>
+<form enctype="multipart/form-data" action="" method="post">
+<p>Octal Digits: <input size="80" type="string" name="boxcar">
+<input type="submit" value="Convert"></p>
+</form>
+</body></html>
+
