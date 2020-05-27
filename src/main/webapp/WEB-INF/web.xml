@@ -69,7 +69,7 @@
 	</servlet-mapping>
 
 	<servlet-mapping>
-		<servlet-name>Spotifyclient</servlet-name>
+		<servlet-name>SpotifyClient</servlet-name>
 		<url-pattern>/spotifyclient</url-pattern>
 	</servlet-mapping>
 
