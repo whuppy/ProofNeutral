@@ -37,6 +37,12 @@
 		<load-on-startup>1</load-on-startup>
 	</servlet>
 	
+	<servlet>
+		<servlet-name>SpotifyClient</servlet-name>
+		<servlet-class>org.frdmrt.spotifyclient.SpotifyClient</servlet-class>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	
 	<servlet-mapping>
 		<servlet-name>simpleServlet</servlet-name>
 		<url-pattern>/</url-pattern>
@@ -61,6 +67,12 @@
 		<servlet-name>DumpHeaders</servlet-name>
 		<url-pattern>/dumpheaders</url-pattern>
 	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>Spotifyclient</servlet-name>
+		<url-pattern>/spotifyclient</url-pattern>
+	</servlet-mapping>
+
 
 	<servlet-mapping>
 		<servlet-name>Distance</servlet-name>
