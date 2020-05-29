@@ -2,13 +2,11 @@ package org.frdmrt.spotifyclient;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.math.BigInteger;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.util.Base64;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -16,7 +14,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.bind.DatatypeConverter;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -45,9 +42,6 @@ public class SpotifyClient extends HttpServlet {
 			  .append("		</head>\r\n")
 			  .append("		<body>\r\n")
 			  .append("			<form action=\"spotifyclient\" method=\"POST\">\r\n") // This has to match up with web.xml entry!
-			  .append("				userName: <input size=\"80\" type=\"text\" name=\"userName\" value=\"125348716\" /><br>\r\n")
-			  .append("				artistName: <input size=\"80\" type=\"text\" name=\"artistName\" /><br>\r\n")
-			  .append("				octalDigits: <input size=\"80\" type=\"text\" name=\"octalDigits\" /><br>\r\n")
 			  .append("				contentType: <input size=\"80\" type=\"text\" name=\"contentType\" value=\"text/html\" /><br>\r\n")
 			  .append("				clientId : <input size=\"80\" type=\"text\" name=\"clientId\" value=\"7f5f9e8debc44b2cafb579b0125e9177\" /><br>\r\n")
 			  .append("				clientSecret : <input size=\"80\" type=\"text\" name=\"clientSecret\" /><br>\r\n")
@@ -63,10 +57,7 @@ public class SpotifyClient extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 			throws ServletException, IOException {
-		String octalDigits = request.getParameter("octalDigits");
 		String authToken = request.getParameter("authToken");
-		//String artistName = request.getParameter("artistName");
-		//String userName = request.getParameter("userName");
 		String clientId = request.getParameter("clientId");
 		String clientSecret = request.getParameter("clientSecret");
 		String objectId = request.getParameter("objectId");
@@ -92,34 +83,10 @@ public class SpotifyClient extends HttpServlet {
 			  .append("		</head>\r\n")
 			  .append("		<body>\r\n");
 		
-		// run the Octohelper
-		if (octalDigits != null && !octalDigits.trim().isEmpty()) {
-			writer.append("	Original input: " + octalDigits + ".<br>\r\n");
-			octalDigits = octalDigits.replaceAll("[^0-7]","");
-			writer.append("	Stripped to Octal Digits only: " + octalDigits + ".<br>\r\n");
-			BigInteger octalBigInt = new BigInteger(octalDigits, 8);
-			writer.append("	Converted to BigInt: " + octalBigInt + ".<br>\r\n");
-			String hexString = octalBigInt.toString(16);
-			writer.append("	In hex format: " + hexString + ".<br>\r\n");
-			if (hexString.length() % 2 == 0) {
-				writer.append("hexString length = " + hexString.length() + ".<br>\r\n" );
-			} else {
-				writer.append("hexString needs trimming, length = " + hexString.length() + ".<br>\r\n" );
-				hexString = hexString.substring(1);
-				writer.append("First digit stripped from hexString, length = " + hexString.length() + ".<br>\r\n" );
-			}
-			byte[] hexBinary = DatatypeConverter.parseHexBinary(hexString);
-			writer.append("Size of byte array = " + hexBinary.length + ".<br>\r\n" );
-			String base64String = Base64.getEncoder().encodeToString(hexBinary);
-			writer.append("Base64 encoding of byte array = " + base64String + ".<br>\r\n" );
-		} else {
-			writer.append("	You left the octalDigits field blank.<br>\r\n");
-		}
-		
-		// Do a Spotify:
+		// If there's an authToken, the do a Spotify:
 		if (authToken != null && !authToken.trim().isEmpty()) {
 			// write out some web page:
-			writer.append("<hr>Hitting Spotify with authToken= " + authToken);
+			writer.append("<br>Hitting Spotify with authToken= " + authToken);
 			writer.append("<br>objectId=" + objectId);
 			writer.append("<br>client_id=" + clientId);
 			writer.append("<br>clientSecret=" + clientSecret);
@@ -143,35 +110,41 @@ public class SpotifyClient extends HttpServlet {
 				// Hit Spotify for the first batch of JSON:
 				spotifyResponse = client.send(outgoingRequest, BodyHandlers.ofString());
 				System.out.println("HTTP Response from Spotify: " + spotifyResponse.statusCode());
-				String currentBatchJson = spotifyResponse.body();
-				allResultsJobject = JsonParser.parseString(currentBatchJson).getAsJsonObject();
-				//writer.append(parsePlaylistsJson(currentBatchJson)); 
-				String nextBatchUrl = getNextBatchUrl(currentBatchJson);
-				//writer.append("<br>nextBatchUrl=" + nextBatchUrl);
-				
-				// Keep getting and processing batches until no more "next": 
-				while (null != nextBatchUrl && !nextBatchUrl.isEmpty()) {
-					outgoingRequest = HttpRequest.newBuilder()
-							.uri(URI.create(nextBatchUrl))
-				            .header("Authorization", "Bearer " + authToken)
-				            .header("Accept", "application/json")
-				            .header("Content-Type", contentType)
-				            .build();
-					spotifyResponse = client.send(outgoingRequest, BodyHandlers.ofString());
-					System.out.println("HTTP Response from Spotify: " + spotifyResponse.statusCode());
-					currentBatchJson = spotifyResponse.body();
-					JsonObject currentBatchJobject = JsonParser.parseString(currentBatchJson).getAsJsonObject();
-					JsonArray currentBatchPlaylistsJarray = currentBatchJobject.get("items").getAsJsonArray();
-					//System.out.println("sizeof currentBatchPlaylistsJarray=" + currentBatchPlaylistsJarray.size());
-					allResultsJobject.get("items").getAsJsonArray().addAll(currentBatchPlaylistsJarray);
-					//writer.append(parsePlaylistsJson(currentBatchJson));
-					//writer.append("<br>Added batch of size=" + currentBatchPlaylistsJarray.size() + " to allResultsJobject \"items\" JsonArray");
-					nextBatchUrl = getNextBatchUrl(currentBatchJson);
+				if (200 == spotifyResponse.statusCode() ) {
+					String currentBatchJson = spotifyResponse.body();
+					allResultsJobject = JsonParser.parseString(currentBatchJson).getAsJsonObject();
+					//writer.append(parsePlaylistsJson(currentBatchJson)); 
+					String nextBatchUrl = getNextBatchUrl(currentBatchJson);
 					//writer.append("<br>nextBatchUrl=" + nextBatchUrl);
+					
+					// Keep getting and processing batches until no more "next": 
+					while (null != nextBatchUrl && !nextBatchUrl.isEmpty()) {
+						outgoingRequest = HttpRequest.newBuilder()
+								.uri(URI.create(nextBatchUrl))
+					            .header("Authorization", "Bearer " + authToken)
+					            .header("Accept", "application/json")
+					            .header("Content-Type", contentType)
+					            .build();
+						spotifyResponse = client.send(outgoingRequest, BodyHandlers.ofString());
+						System.out.println("HTTP Response from Spotify: " + spotifyResponse.statusCode());
+						currentBatchJson = spotifyResponse.body();
+						JsonObject currentBatchJobject = JsonParser.parseString(currentBatchJson).getAsJsonObject();
+						JsonArray currentBatchPlaylistsJarray = currentBatchJobject.get("items").getAsJsonArray();
+						//System.out.println("sizeof currentBatchPlaylistsJarray=" + currentBatchPlaylistsJarray.size());
+						allResultsJobject.get("items").getAsJsonArray().addAll(currentBatchPlaylistsJarray);
+						//writer.append(parsePlaylistsJson(currentBatchJson));
+						//writer.append("<br>Added batch of size=" + currentBatchPlaylistsJarray.size() + " to allResultsJobject \"items\" JsonArray");
+						nextBatchUrl = getNextBatchUrl(currentBatchJson);
+						//writer.append("<br>nextBatchUrl=" + nextBatchUrl);
+					}
+					
+					// Look at the final results:
+					writer.append(parsePlaylistsJobject(allResultsJobject));
 				}
-				
-				// Look at the final results:
-				writer.append(parsePlaylistsJobject(allResultsJobject));
+				else if (401 == spotifyResponse.statusCode() ) {
+					writer.append("<hr>HTTP Error 401 Unauthorized<br>");
+					writer.append(spotifyResponse.body());
+				}
 				
 			} catch (IOException | InterruptedException e) {
 				// TODO Auto-generated catch block
@@ -179,7 +152,7 @@ public class SpotifyClient extends HttpServlet {
 			}
 		    
 		} else {
-			writer.append("<hr>You left the authToken field blank, we ain't tryin Spotify without an authToken.");
+			writer.append("<br>You left the authToken field blank, we ain't tryin Spotify without an authToken.");
 			writer.append("<br>Go to <A href=https://developer.spotify.com/console/get-current-user-playlists/>this Spotify API page for Get a List of Current User's Playlists</a> for a new token. They expire quickly.");
 		}
 		writer.append("<hr>\r\n")
