@@ -26,6 +26,7 @@ import com.google.gson.JsonParser;
 
 public class SpotifyClient extends HttpServlet {
 	private static final long serialVersionUID = 1904358306353295742L;
+	private JsonObject allResultsJobject = null;
 	
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
@@ -117,10 +118,8 @@ public class SpotifyClient extends HttpServlet {
 		
 		// Do a Spotify:
 		if (authToken != null && !authToken.trim().isEmpty()) {
-			// If there's a authToken then let's hit Spotify!
-			
 			// write out some web page:
-			writer.append("<hr>Hitting Spotify with<br>authToken=" + authToken);
+			writer.append("<hr>Hitting Spotify with authToken= " + authToken);
 			writer.append("<br>objectId=" + objectId);
 			writer.append("<br>client_id=" + clientId);
 			writer.append("<br>clientSecret=" + clientSecret);
@@ -129,7 +128,7 @@ public class SpotifyClient extends HttpServlet {
 			String spotify_api = "https://api.spotify.com/v1" ; // leave out trailing slash
 			String spotifyUrl = spotify_api + operationUrl;
 			//String spotifyUrl = "http://localhost:8080/ProofNeutral/dumpheaders" ;
-			writer.append("<br>spotifyUrl=" + spotifyUrl + "<hr>");
+			writer.append("<br>spotifyUrl=" + spotifyUrl);
 			
 			// set up the HTTP Client:
 			HttpClient client = HttpClient.newBuilder().build();
@@ -140,17 +139,15 @@ public class SpotifyClient extends HttpServlet {
 		            .header("Content-Type", contentType)
 		            .build();
 		    HttpResponse<String> spotifyResponse;
-		    //StringBuilder responseJSON = new StringBuilder();
 			try {
-				// Get the first batch of JSON:
+				// Hit Spotify for the first batch of JSON:
 				spotifyResponse = client.send(outgoingRequest, BodyHandlers.ofString());
 				System.out.println("HTTP Response from Spotify: " + spotifyResponse.statusCode());
 				String currentBatchJson = spotifyResponse.body();
-				//responseJSON.append(currentBatchJson);
-				//writer.append(responseJSON);
-				writer.append(parsePlaylistsJson(currentBatchJson)); 
+				allResultsJobject = JsonParser.parseString(currentBatchJson).getAsJsonObject();
+				//writer.append(parsePlaylistsJson(currentBatchJson)); 
 				String nextBatchUrl = getNextBatchUrl(currentBatchJson);
-				writer.append("<br>nextBatchUrl=" + nextBatchUrl);
+				//writer.append("<br>nextBatchUrl=" + nextBatchUrl);
 				
 				// Keep getting and processing batches until no more "next": 
 				while (null != nextBatchUrl && !nextBatchUrl.isEmpty()) {
@@ -163,10 +160,19 @@ public class SpotifyClient extends HttpServlet {
 					spotifyResponse = client.send(outgoingRequest, BodyHandlers.ofString());
 					System.out.println("HTTP Response from Spotify: " + spotifyResponse.statusCode());
 					currentBatchJson = spotifyResponse.body();
-					writer.append(parsePlaylistsJson(currentBatchJson));
+					JsonObject currentBatchJobject = JsonParser.parseString(currentBatchJson).getAsJsonObject();
+					JsonArray currentBatchPlaylistsJarray = currentBatchJobject.get("items").getAsJsonArray();
+					//System.out.println("sizeof currentBatchPlaylistsJarray=" + currentBatchPlaylistsJarray.size());
+					allResultsJobject.get("items").getAsJsonArray().addAll(currentBatchPlaylistsJarray);
+					//writer.append(parsePlaylistsJson(currentBatchJson));
+					//writer.append("<br>Added batch of size=" + currentBatchPlaylistsJarray.size() + " to allResultsJobject \"items\" JsonArray");
 					nextBatchUrl = getNextBatchUrl(currentBatchJson);
-					writer.append("<br>nextBatchUrl=" + nextBatchUrl);
+					//writer.append("<br>nextBatchUrl=" + nextBatchUrl);
 				}
+				
+				// Look at the final results:
+				writer.append(parsePlaylistsJobject(allResultsJobject));
+				
 			} catch (IOException | InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -185,18 +191,15 @@ public class SpotifyClient extends HttpServlet {
 			  .append("</html>\r\n");
 	}
 	
-	String parsePlaylistsJson(String playlistsJson) {
+	String parsePlaylistsJobject(JsonObject playlistsJobject) {
 		StringBuilder result = new StringBuilder();
-		result.append("<hr>Parsing the JSON into an object . . .");
-
-		JsonObject playlistsJobject = null;
+		result.append("<hr>Introspecting the JsonObject . . .");
 		try {
-			playlistsJobject =  JsonParser.parseString(playlistsJson).getAsJsonObject();
 			if (null == playlistsJobject) {
-				result.append("<br>null JsonObject from playlistsJson=" + playlistsJson);
-				System.out.print("null playlistsObject from playlistsJson=" + playlistsJson);
+				result.append("<br>parsePlaylistJobject received a null playlistsJobject");
+				System.out.print("parsePlaylistJobject received a null playlistsJobject");
 			} else {
-				result.append("<br>Retrieving playlists keySet . . .");
+				result.append("<br><br>Retrieving playlists keySet . . .");
 				Set<String> plkeys = playlistsJobject.keySet();
 				Iterator<String> it = plkeys.iterator();
 				while (it.hasNext()) {
@@ -214,8 +217,7 @@ public class SpotifyClient extends HttpServlet {
 						result.append("<br>" + keyName );
 					}
 				}
-				result.append("<br>");
-				result.append("Retrieving playlists . . .");
+				result.append("<br><br>Retrieving playlists . . .");
 				JsonArray playlistArray = playlistsJobject.getAsJsonArray("items");
 				Iterator<JsonElement> plit = playlistArray.iterator();
 				while (plit.hasNext()) {
@@ -224,6 +226,30 @@ public class SpotifyClient extends HttpServlet {
 					String plName = plObject.get("name").getAsString();
 					result.append("<br>" + plName);
 				}
+			}
+		}
+		catch (Exception e) {
+			result.append("<hr>Exception parsing playlistsJson");
+			result.append("<br>Exception: " + e.getMessage() );
+			throw e;
+		}
+
+		return result.toString();
+	}
+
+	
+	String parsePlaylistsJson(String playlistsJson) {
+		StringBuilder result = new StringBuilder();
+		result.append("<hr>Parsing the JSON into an object . . .");
+
+		JsonObject playlistsJobject = null;
+		try {
+			playlistsJobject =  JsonParser.parseString(playlistsJson).getAsJsonObject();
+			if (null == playlistsJobject) {
+				result.append("<br>null JsonObject from playlistsJson=" + playlistsJson);
+				System.out.print("null playlistsObject from playlistsJson=" + playlistsJson);
+			} else {
+				result.append(parsePlaylistsJobject(playlistsJobject));
 			}
 		}
 		catch (Exception e) {
