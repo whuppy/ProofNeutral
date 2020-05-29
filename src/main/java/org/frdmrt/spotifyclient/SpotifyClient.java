@@ -15,6 +15,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -65,6 +67,7 @@ public class SpotifyClient extends HttpServlet {
 		if ((null == operationUrl)  || operationUrl.trim().isEmpty()) {
 			operationUrl = "/me/playlists"; // make sure there's a leading slash!
 			// ooh, maybe add it here if the first char isn't '/'
+			// also try "/playlists/5yzFco7t9AI5nU2f2jRBXh"
 		}
 		String contentType = request.getParameter("contentType");
 		if ((null == contentType)  || contentType.trim().isEmpty()) {
@@ -86,7 +89,7 @@ public class SpotifyClient extends HttpServlet {
 		// If there's an authToken, the do a Spotify:
 		if (authToken != null && !authToken.trim().isEmpty()) {
 			// write out some web page:
-			writer.append("<br>Hitting Spotify with authToken= " + authToken);
+			writer.append("Hitting Spotify with authToken= " + authToken);
 			writer.append("<br>objectId=" + objectId);
 			writer.append("<br>client_id=" + clientId);
 			writer.append("<br>clientSecret=" + clientSecret);
@@ -139,7 +142,23 @@ public class SpotifyClient extends HttpServlet {
 					}
 					
 					// Look at the final results:
-					writer.append(parsePlaylistsJobject(allResultsJobject));
+					if (operationUrl.contains("me/playlists")) {
+						writer.append(parsePlaylistsJobject(allResultsJobject));
+						Gson myGson = new GsonBuilder()
+								.setPrettyPrinting()
+								.create();
+						String allResultsPrettyJson = myGson.toJson(allResultsJobject);
+						//System.out.println(allResultsPrettyJson);
+						writer.append("<hr><pre>" + allResultsPrettyJson + "</pre>");
+					}
+					else {
+						Gson myGson = new GsonBuilder()
+								.setPrettyPrinting()
+								.create();
+						String allResultsPrettyJson = myGson.toJson(allResultsJobject);
+						//System.out.println(allResultsPrettyJson);
+						writer.append("<hr><pre>" + allResultsPrettyJson + "</pre>");
+					}
 				}
 				else if (401 == spotifyResponse.statusCode() ) {
 					writer.append("<hr>HTTP Error 401 Unauthorized<br>");
@@ -166,13 +185,13 @@ public class SpotifyClient extends HttpServlet {
 	
 	String parsePlaylistsJobject(JsonObject playlistsJobject) {
 		StringBuilder result = new StringBuilder();
-		result.append("<hr>Introspecting the JsonObject . . .");
+		result.append("<hr>Introspecting playlistsJobject . . .");
 		try {
 			if (null == playlistsJobject) {
 				result.append("<br>parsePlaylistJobject received a null playlistsJobject");
 				System.out.print("parsePlaylistJobject received a null playlistsJobject");
 			} else {
-				result.append("<br><br>Retrieving playlists keySet . . .");
+				result.append("<br><br>Retrieving playlistsJobject keySet . . .");
 				Set<String> plkeys = playlistsJobject.keySet();
 				Iterator<String> it = plkeys.iterator();
 				while (it.hasNext()) {
@@ -193,12 +212,19 @@ public class SpotifyClient extends HttpServlet {
 				result.append("<br><br>Retrieving playlists . . .");
 				JsonArray playlistArray = playlistsJobject.getAsJsonArray("items");
 				Iterator<JsonElement> plit = playlistArray.iterator();
+				result.append("<table>");
+				result.append("<tr><th>Name</th><th>ID</th><th>Num</th></tr>");
 				while (plit.hasNext()) {
 					JsonElement plElement = plit.next();
 					JsonObject plObject = plElement.getAsJsonObject();
 					String plName = plObject.get("name").getAsString();
-					result.append("<br>" + plName);
+					String plId = plObject.get("id").getAsString();
+					JsonObject tracksObject = plObject.get("tracks").getAsJsonObject();
+					String numTracks = tracksObject.get("total").getAsString();
+					result.append("<tr><td>" + plName + "</td><td>" + plId + "</td><td>" + numTracks + "</tr>" );
+					
 				}
+				result.append("</table>");
 			}
 		}
 		catch (Exception e) {
