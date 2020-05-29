@@ -120,11 +120,9 @@ public class SpotifyClient extends HttpServlet {
 				if (200 == spotifyResponse.statusCode() ) {
 					String currentBatchJson = spotifyResponse.body();
 					allResultsJobject = JsonParser.parseString(currentBatchJson).getAsJsonObject();
-					//writer.append(parsePlaylistsJson(currentBatchJson)); 
 					String nextBatchUrl = getNextBatchUrl(currentBatchJson);
-					//writer.append("<br>nextBatchUrl=" + nextBatchUrl);
 					
-					// Keep getting and processing batches until no more "next": 
+					// Keep getting batches and appending to "items" until no more "next": 
 					while (null != nextBatchUrl && !nextBatchUrl.isEmpty()) {
 						outgoingRequest = HttpRequest.newBuilder()
 								.uri(URI.create(nextBatchUrl))
@@ -136,13 +134,9 @@ public class SpotifyClient extends HttpServlet {
 						System.out.println("HTTP Response from Spotify: " + spotifyResponse.statusCode());
 						currentBatchJson = spotifyResponse.body();
 						JsonObject currentBatchJobject = JsonParser.parseString(currentBatchJson).getAsJsonObject();
-						JsonArray currentBatchPlaylistsJarray = currentBatchJobject.get("items").getAsJsonArray();
-						//System.out.println("sizeof currentBatchPlaylistsJarray=" + currentBatchPlaylistsJarray.size());
-						allResultsJobject.get("items").getAsJsonArray().addAll(currentBatchPlaylistsJarray);
-						//writer.append(parsePlaylistsJson(currentBatchJson));
-						//writer.append("<br>Added batch of size=" + currentBatchPlaylistsJarray.size() + " to allResultsJobject \"items\" JsonArray");
+						JsonArray currentBatchJarray = currentBatchJobject.get("items").getAsJsonArray();
+						allResultsJobject.get("items").getAsJsonArray().addAll(currentBatchJarray);
 						nextBatchUrl = getNextBatchUrl(currentBatchJson);
-						//writer.append("<br>nextBatchUrl=" + nextBatchUrl);
 					}
 					
 					// Look at the final results:
@@ -156,15 +150,14 @@ public class SpotifyClient extends HttpServlet {
 						writer.append("<hr><pre>" + allResultsPrettyJson + "</pre>");
 					}
 					else if (spotifyUrl.contains("v1/playlists")) { // Operation was "retrieve a specific playlist"
-//						Gson myGson = new GsonBuilder()
-//								.setPrettyPrinting()
-//								.create();
-//						String allResultsPrettyJson = myGson.toJson(allResultsJobject);
-//						System.out.println(allResultsPrettyJson);
-//						writer.append("<hr><pre>" + allResultsPrettyJson + "</pre>");
-						writer.append(parseSinglePlaylist(allResultsJobject));
+						if (spotifyUrl.contains("/tracks")) { // Operation was "retrieve tracks from a specific playlist"
+							writer.append(parseSinglePlaylistTracks(allResultsJobject));
+						}
+						else { // Just the playlist and the first 100 tracks
+							writer.append(parseSinglePlaylist(allResultsJobject));	
+						}
 					}
-					else {
+					else { // fall back on just dumping the JSON
 						Gson myGson = new GsonBuilder()
 								.setPrettyPrinting()
 								.create();
@@ -368,17 +361,26 @@ public class SpotifyClient extends HttpServlet {
 				JsonArray itemsJarray = itemsElement.getAsJsonArray();
 				Iterator<JsonElement> itArIt = itemsJarray.iterator();
 				result.append("<table>");
-				result.append("<tr><th>Name</th><th>ID</th><th>Artists[0]</th></tr>");
+				result.append("<tr><th>Artists[0]</th><th>Name</th><th>Album</th><th>Track ID</th></tr>");
 				while (itArIt.hasNext()) {
 					JsonObject trackArrayObject = itArIt.next().getAsJsonObject();
 					JsonObject actualTrackJobject = trackArrayObject.get("track").getAsJsonObject();
 					String atName = actualTrackJobject.get("name").getAsString();
-					String atTrackId = actualTrackJobject.get("id").getAsString();
+					String atTrackId = null;
+					if (actualTrackJobject.get("is_local").getAsString().equalsIgnoreCase("false")) {
+						atTrackId = actualTrackJobject.get("id").getAsString();
+					}
+					else {
+						atTrackId = "N/A";
+					}
 					//String atArtist = actualTrackJobject.get("artist").getAsJsonObject().toString();
 					JsonArray artistsJarray = actualTrackJobject.get("artists").getAsJsonArray();
 					JsonObject firstArtistJobject = artistsJarray.get(0).getAsJsonObject();
 					String atFirstArtistName = firstArtistJobject.get("name").getAsString();
-					result.append("<tr><td>" + atName + "</td><td>" + atTrackId + "</td><td>" + atFirstArtistName + "</td></tr>" );
+					JsonObject atAlbumJobject = actualTrackJobject.get("album").getAsJsonObject();
+					String atAlbumName = atAlbumJobject.get("name").getAsString();
+					result.append("<tr><td>" + atFirstArtistName + "</td><td>" + atName + "</td><td>" + atAlbumName + "</td><td>" 
+							+ atTrackId + "</td></tr>" );
 					//System.out.println(atName);
 				}
 				result.append("</table>");
