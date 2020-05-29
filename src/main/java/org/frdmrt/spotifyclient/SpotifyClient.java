@@ -97,6 +97,10 @@ public class SpotifyClient extends HttpServlet {
 			// set up the URL:
 			String spotify_api = "https://api.spotify.com/v1" ; // leave out trailing slash
 			String spotifyUrl = spotify_api + operationUrl;
+			//System.out.println("spotifyApi before URLencoder=" + spotifyUrl);
+			//spotifyUrl = URLDecoder.decode(spotifyUrl, "UTF-8");
+			//spotifyUrl = URLEncoder.encode(spotifyUrl, "UTF-8");
+			//System.out.println("spotifyApi after URLencodr=" + spotifyUrl);
 			//String spotifyUrl = "http://localhost:8080/ProofNeutral/dumpheaders" ;
 			writer.append("<br>spotifyUrl=" + spotifyUrl);
 			
@@ -142,7 +146,7 @@ public class SpotifyClient extends HttpServlet {
 					}
 					
 					// Look at the final results:
-					if (operationUrl.contains("me/playlists")) {
+					if (operationUrl.contains("me/playlists")) { // Operation was "retrieve all playlists"
 						writer.append(parsePlaylistsJobject(allResultsJobject));
 						Gson myGson = new GsonBuilder()
 								.setPrettyPrinting()
@@ -150,6 +154,15 @@ public class SpotifyClient extends HttpServlet {
 						String allResultsPrettyJson = myGson.toJson(allResultsJobject);
 						//System.out.println(allResultsPrettyJson);
 						writer.append("<hr><pre>" + allResultsPrettyJson + "</pre>");
+					}
+					else if (spotifyUrl.contains("v1/playlists")) { // Operation was "retrieve a specific playlist"
+//						Gson myGson = new GsonBuilder()
+//								.setPrettyPrinting()
+//								.create();
+//						String allResultsPrettyJson = myGson.toJson(allResultsJobject);
+//						System.out.println(allResultsPrettyJson);
+//						writer.append("<hr><pre>" + allResultsPrettyJson + "</pre>");
+						writer.append(parseSinglePlaylist(allResultsJobject));
 					}
 					else {
 						Gson myGson = new GsonBuilder()
@@ -279,4 +292,105 @@ public class SpotifyClient extends HttpServlet {
 		}
 	}
 	
+	String parseSinglePlaylist(JsonObject singlePlaylistJobject) {
+		StringBuilder result = new StringBuilder();
+		result.append("<hr>Introspecting singlePlaylistJobject . . .");
+		try {
+			if (null == singlePlaylistJobject) {
+				result.append("<br>parseSinglePlaylist received a null singlePlaylistJobject");
+				System.out.print("parseSinglePlaylist received a null singlePlaylistJobject");
+			} else {
+				result.append("<br><br>Retrieving singlePlaylistJobject keySet . . .");
+				Set<String> plkeys = singlePlaylistJobject.keySet();
+				Iterator<String> it = plkeys.iterator();
+				while (it.hasNext()) {
+					String keyName = it.next();
+					JsonElement valElement = singlePlaylistJobject.get(keyName);
+					if (keyName.equalsIgnoreCase("tracks")) {
+						result.append("<br>Skipping \"tracks\" JSON is too long to show here");
+					} 
+					else if (keyName.equalsIgnoreCase("items")) {
+						result.append("<br>\"items\" found. We must be actually looking at a tracks JsonObject");
+						result.append(parseSinglePlaylistTracks(singlePlaylistJobject));
+					}
+					else {
+						result.append("<br>" + keyName + ": " + valElement.toString());
+						//System.out.println(keyName);
+					}
+				}
+				
+				JsonElement tracksElement = singlePlaylistJobject.get("tracks");
+				if (null == tracksElement || tracksElement.isJsonNull()) {
+					result.append("<br>tracks: JsonNull or null");
+				} else {
+					JsonObject tracksJobject = tracksElement.getAsJsonObject();
+					result.append(parseSinglePlaylistTracks(tracksJobject));
+				}
+				result.append("<br>. . . done introspecting singlePlaylistJobject");
+			}
+		}
+		catch (Exception e) {
+			result.append("<hr>Exception parsing playlistsJson");
+			result.append("<br>Exception: " + e.getMessage() );
+			throw e;
+		}
+		
+		return result.toString();
+	}
+	
+	String parseSinglePlaylistTracks(JsonObject tracksJobject) {
+		StringBuilder result = new StringBuilder();
+		result.append("<hr>Introspecting tracksJobject . . .");
+		try {
+			if (null == tracksJobject) {
+				result.append("<br>parseSinglePlaylistTracks received a null tracksJobject");
+				System.out.print("parseSinglePlaylistTracks received a null tracksJobject");
+			} else {
+				result.append("<br><br>Retrieving tracksJobject keySet . . .");
+				Set<String> plkeys = tracksJobject.keySet();
+				Iterator<String> it = plkeys.iterator();
+				while (it.hasNext()) {
+					String keyName = it.next();
+					JsonElement valElement = tracksJobject.get(keyName);
+					if (keyName.equalsIgnoreCase("items")) {
+						result.append("<br>" + keyName + " JSON is too long (" + valElement.getAsJsonArray().size() + " items) to show here");
+					} 
+					else {
+						result.append("<br>" + keyName + ": " + valElement.toString());
+					}
+				}
+			}
+			result.append("<br>Drilling down into \"items\" . . .");
+			JsonElement itemsElement = tracksJobject.get("items");
+			if (null == itemsElement || itemsElement.isJsonNull()) {
+				result.append("<br>items: JsonNull or null");
+			} else {
+				JsonArray itemsJarray = itemsElement.getAsJsonArray();
+				Iterator<JsonElement> itArIt = itemsJarray.iterator();
+				result.append("<table>");
+				result.append("<tr><th>Name</th><th>ID</th><th>Artists[0]</th></tr>");
+				while (itArIt.hasNext()) {
+					JsonObject trackArrayObject = itArIt.next().getAsJsonObject();
+					JsonObject actualTrackJobject = trackArrayObject.get("track").getAsJsonObject();
+					String atName = actualTrackJobject.get("name").getAsString();
+					String atTrackId = actualTrackJobject.get("id").getAsString();
+					//String atArtist = actualTrackJobject.get("artist").getAsJsonObject().toString();
+					JsonArray artistsJarray = actualTrackJobject.get("artists").getAsJsonArray();
+					JsonObject firstArtistJobject = artistsJarray.get(0).getAsJsonObject();
+					String atFirstArtistName = firstArtistJobject.get("name").getAsString();
+					result.append("<tr><td>" + atName + "</td><td>" + atTrackId + "</td><td>" + atFirstArtistName + "</td></tr>" );
+					//System.out.println(atName);
+				}
+				result.append("</table>");
+			}
+			result.append("<br>. . . done introspecting tracksJobject.<br>");
+		}
+		catch (Exception e) {
+			result.append("<hr>Exception parsing tracksJobject");
+			result.append("<br>Exception: " + e.getMessage());
+			throw e;
+		}
+
+		return result.toString();
+	}
 }
