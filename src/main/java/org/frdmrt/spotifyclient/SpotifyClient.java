@@ -45,7 +45,7 @@ public class SpotifyClient extends HttpServlet {
 			  .append("		<body>\r\n")
 			  .append("			<form action=\"spotifyclient\" method=\"POST\">\r\n") // This has to match up with web.xml entry!
 			  .append("				contentType: <input size=\"80\" type=\"text\" name=\"contentType\" value=\"text/html\" /><br>\r\n")
-			  .append("				clientId : <input size=\"80\" type=\"text\" name=\"clientId\" value=\"7f5f9e8debc44b2cafb579b0125e9177\" /><br>\r\n")
+			  .append("				clientId : <input size=\"80\" type=\"text\" name=\"clientId\" /><br>\r\n")
 			  .append("				clientSecret : <input size=\"80\" type=\"text\" name=\"clientSecret\" /><br>\r\n")
 			  .append("				objectId : <input size=\"80\" type=\"text\" name=\"objectId\" /><br>\r\n")
 			  .append("				operationUrl : <input size=\"80\" type=\"text\" name=\"operationUrl\" value=\"/me/playlists\" /><br>\r\n")
