@@ -38,6 +38,12 @@
 	</servlet>
 	
 	<servlet>
+		<servlet-name>DumpEnvironment</servlet-name>
+		<servlet-class>org.frdmrt.envirodumper.DumpEnvironment</servlet-class>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	
+	<servlet>
 		<servlet-name>SpotifyClient</servlet-name>
 		<servlet-class>org.frdmrt.spotifyclient.SpotifyClient</servlet-class>
 		<load-on-startup>1</load-on-startup>
@@ -66,6 +72,11 @@
 	<servlet-mapping>
 		<servlet-name>DumpHeaders</servlet-name>
 		<url-pattern>/dumpheaders</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>DumpEnvironment</servlet-name>
+		<url-pattern>/dumpenvironment</url-pattern>
 	</servlet-mapping>
 
 	<servlet-mapping>
