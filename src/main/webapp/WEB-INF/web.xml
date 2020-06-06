@@ -49,6 +49,18 @@
 		<load-on-startup>1</load-on-startup>
 	</servlet>
 	
+	<servlet>
+		<servlet-name>Jerslet</servlet-name>
+		<servlet-class>org.frdmrt.jerslet.JerseyService</servlet-class>
+		<load-on-startup>1</load-on-startup>
+		<!--  
+		<init-param>
+            <param-name>com.sun.jersey.config.property.packages</param-name>
+            <param-value>org.madhawa.services</param-value>
+        </init-param>
+        -->
+	</servlet>
+	
 	<servlet-mapping>
 		<servlet-name>simpleServlet</servlet-name>
 		<url-pattern>/</url-pattern>
@@ -82,6 +94,11 @@
 	<servlet-mapping>
 		<servlet-name>SpotifyClient</servlet-name>
 		<url-pattern>/spotifyclient</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>Jerslet</servlet-name>
+		<url-pattern>/jerslet/*</url-pattern>
 	</servlet-mapping>
 
 
