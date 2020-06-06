@@ -49,17 +49,17 @@
 		<load-on-startup>1</load-on-startup>
 	</servlet>
 	
+	<!--  
 	<servlet>
 		<servlet-name>Jerslet</servlet-name>
-		<servlet-class>org.frdmrt.jerslet.JerseyService</servlet-class>
+		<servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
 		<load-on-startup>1</load-on-startup>
-		<!--  
 		<init-param>
             <param-name>com.sun.jersey.config.property.packages</param-name>
-            <param-value>org.madhawa.services</param-value>
+            <param-value>org.frdmrt.jerslet</param-value>
         </init-param>
-        -->
 	</servlet>
+    -->
 	
 	<servlet-mapping>
 		<servlet-name>simpleServlet</servlet-name>
@@ -82,6 +82,11 @@
 	</servlet-mapping>
 
 	<servlet-mapping>
+		<servlet-name>Distance</servlet-name>
+		<url-pattern>/distance</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
 		<servlet-name>DumpHeaders</servlet-name>
 		<url-pattern>/dumpheaders</url-pattern>
 	</servlet-mapping>
@@ -96,15 +101,12 @@
 		<url-pattern>/spotifyclient</url-pattern>
 	</servlet-mapping>
 
+	<!--  
 	<servlet-mapping>
 		<servlet-name>Jerslet</servlet-name>
 		<url-pattern>/jerslet/*</url-pattern>
 	</servlet-mapping>
+	-->
 
-
-	<servlet-mapping>
-		<servlet-name>Distance</servlet-name>
-		<url-pattern>/distance</url-pattern>
-	</servlet-mapping>
 
 </web-app>
